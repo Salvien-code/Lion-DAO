@@ -2,7 +2,8 @@ import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
 import "dotenv/config";
 
-const { METAMASK_PRIVATE_KEY, ALCHEMY_API_URL } = process.env;
+const { METAMASK_PRIVATE_KEY, ALCHEMY_API_URL, ETHERSCAN_API_KEY } =
+  process.env;
 
 const config: HardhatUserConfig = {
   solidity: "0.8.17",
@@ -14,6 +15,9 @@ const config: HardhatUserConfig = {
   },
   paths: {
     artifacts: "./client/artifacts",
+  },
+  etherscan: {
+    apiKey: ETHERSCAN_API_KEY,
   },
 };
 

@@ -2,10 +2,17 @@ import Head from "next/head";
 import Image from "next/image";
 import { useRef, useState } from "react";
 import styles from "../styles/Home.module.css";
-import { DAO_ADDRESS } from "../../Constants";
+import {
+  DAO_ABI,
+  DAO_ADDRESS,
+  NFT_ABI,
+  NFT_CONTRACT_ADDRESS,
+} from "../Constants";
+import { Contract, providers, Signer } from "ethers";
+import { Web3Provider } from "@ethersproject/providers";
 
 export default function Home() {
-  const [treasuryBalance, setTreasuryBalance] = useState(0);
+  const [treasuryBalance, setTreasuryBalance] = useState("0");
   const [numProposals, setNumProposals] = useState(0);
   const [proposals, setProsals] = useState([]);
 
@@ -49,7 +56,7 @@ export default function Home() {
 
   const getUserNFTBalance = async () => {
     try {
-      const signer = await getProviderOrSigner(true);
+      const signer = (await getProviderOrSigner(true)) as Signer;
       const nftContract = getNftContractInstance(signer);
       const balance = await nftContract.balanceOf(signer.getAddress());
       setNftBalance(parseInt(balance.toString()));
@@ -123,9 +130,9 @@ export default function Home() {
 
   const executeProposal = async (proposalsId: any) => {
     try {
-      const signer = await getProvierOrSigner(true);
+      const signer = await getProviderOrSigner(true);
       const daoContract = getDaoContractInstance(signer);
-      const txn = await daoContract.executeProposal(proposalId);
+      const txn = await daoContract.executeProposal(proposalsId);
       setLoading(true);
       await txn.wait();
       setLoading(false);
@@ -137,7 +144,29 @@ export default function Home() {
   };
 
   const getProviderOrSigner = async (needSigner = false) => {
-    const;
+    // @ts-ignore
+    const provider = await web3ModalRef.current!.connect();
+    const web3Provider = new providers.Web3Provider(provider);
+
+    const { chainId } = await web3Provider.getNetwork();
+    if (chainId !== 5) {
+      window.alert("Please switch to the Goerli network!");
+      throw new Error("Please switch to the Goerli Network");
+    }
+
+    if (needSigner) {
+      const signer = web3Provider.getSigner();
+      return signer;
+    }
+    return web3Provider;
+  };
+
+  const getDaoContractInstance = (providerOrSigner: Web3Provider | Signer) => {
+    return new Contract(DAO_ADDRESS, DAO_ABI, providerOrSigner);
+  };
+
+  const getNftContractInstance = (providerOrSigner: Web3Provider | Signer) => {
+    return new Contract(NFT_CONTRACT_ADDRESS, NFT_ABI, providerOrSigner);
   };
 
   return <div></div>;

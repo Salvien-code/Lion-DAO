@@ -1,5 +1,6 @@
-import { ethers } from "hardhat";
-import { NFT_CONTRACT_ADDRESS } from "../Constants";
+import { ethers, run } from "hardhat";
+import { setTimeout } from "timers/promises";
+import { NFT_CONTRACT_ADDRESS } from "../client/Constants";
 
 async function main() {
   const FakeNFTMarketplace = await ethers.getContractFactory(
@@ -22,6 +23,15 @@ async function main() {
   );
   await lionDAO.deployed();
   console.log(`LionDAO deployed to: ${lionDAO.address}`);
+
+  console.log(`Waiting for a minute before verifying Consumer contract`);
+  await setTimeout(60000);
+
+  await run("verify:verify", {
+    address: lionDAO.address,
+    arguments: [fakeNftMarketplace.address, NFT_CONTRACT_ADDRESS],
+  });
+  console.log(`Verified LionDAO contract on Goerli`);
 }
 
 main()
