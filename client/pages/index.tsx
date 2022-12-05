@@ -2,7 +2,7 @@ import Head from "next/head";
 import Image from "next/image";
 import { useRef, useState } from "react";
 import styles from "../styles/Home.module.css";
-import { DAO_ADDRESS } from "../../smart-contracts/Constants";
+import { DAO_ADDRESS } from "../../Constants";
 
 export default function Home() {
   const [treasuryBalance, setTreasuryBalance] = useState(0);
@@ -134,6 +134,10 @@ export default function Home() {
       console.error(error);
       window.alert(error.data.message);
     }
+  };
+
+  const getProviderOrSigner = async (needSigner = false) => {
+    const;
   };
 
   return <div></div>;

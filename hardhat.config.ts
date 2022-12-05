@@ -12,6 +12,9 @@ const config: HardhatUserConfig = {
       accounts: [METAMASK_PRIVATE_KEY!],
     },
   },
+  paths: {
+    artifacts: "./client/artifacts",
+  },
 };
 
 export default config;
