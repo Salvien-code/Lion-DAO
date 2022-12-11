@@ -3,6 +3,23 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 
+interface IFakeNFTMarketplace {
+    function getPrice() external view returns (uint256);
+
+    function available(uint256 _tokenId) external view returns (bool);
+
+    function purchase(uint256 _tokenId) external payable;
+}
+
+interface ILionNFT {
+    function balanceOf(address owner) external view returns (uint256);
+
+    function tokenOfOwnerByIndex(address owner, uint256 index)
+        external
+        view
+        returns (uint256);
+}
+
 contract LionDAO is Ownable {
     struct Proposal {
         uint256 nftTokenId;
@@ -110,27 +127,12 @@ contract LionDAO is Ownable {
     }
 
     function withdrawEther() external onlyOwner {
-        payable(owner()).transfer(address(this).balance);
+        uint256 amount = address(this).balance;
+        require(amount > 0, "Nothing to withdraw; contract balance empty");
+        payable(owner()).transfer(amount);
     }
 
     receive() external payable {}
 
     fallback() external payable {}
-}
-
-interface IFakeNFTMarketplace {
-    function getPrice() external view returns (uint256);
-
-    function available(uint256 _tokenId) external view returns (bool);
-
-    function purchase(uint256 _tokenId) external payable;
-}
-
-interface ILionNFT {
-    function balanceOf(address owner) external view returns (uint256);
-
-    function tokenOfOwnerByIndex(address owner, uint256 index)
-        external
-        view
-        returns (uint256);
 }
