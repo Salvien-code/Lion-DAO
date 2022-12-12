@@ -10,7 +10,7 @@ async function main() {
   await fakeNftMarketplace.deployed();
 
   console.log(
-    `Fake NFT Marketplace deployed to: ${fakeNftMarketplace.address}`
+    `Fake NFT Marketplace deployed to: ${fakeNftMarketplace.address}\n`
   );
 
   const LionDAO = await ethers.getContractFactory("LionDAO");
@@ -22,14 +22,14 @@ async function main() {
     }
   );
   await lionDAO.deployed();
-  console.log(`LionDAO deployed to: ${lionDAO.address}`);
+  console.log(`LionDAO deployed to: ${lionDAO.address}\n`);
 
-  console.log(`Waiting for a minute before verifying Consumer contract`);
+  console.log(`Waiting for a minute before verifying the DAO contract \n`);
   await setTimeout(60000);
 
   await run("verify:verify", {
     address: lionDAO.address,
-    arguments: [fakeNftMarketplace.address, NFT_CONTRACT_ADDRESS],
+    constructorArguments: [fakeNftMarketplace.address, NFT_CONTRACT_ADDRESS],
   });
   console.log(`Verified LionDAO contract on Goerli`);
 }

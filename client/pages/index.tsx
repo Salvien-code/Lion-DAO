@@ -1,6 +1,7 @@
 import Head from "next/head";
 import Image from "next/image";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+
 import styles from "../styles/Home.module.css";
 import {
   DAO_ABI,
@@ -10,18 +11,22 @@ import {
 } from "../Constants";
 import { Contract, providers, Signer } from "ethers";
 import { Web3Provider } from "@ethersproject/providers";
+import Web3Modal from "web3modal";
+import { Proposal } from "../types";
 
 export default function Home() {
+  const [walletConnected, setWalletConnected] = useState(false);
   const [treasuryBalance, setTreasuryBalance] = useState("0");
-  const [numProposals, setNumProposals] = useState(0);
-  const [proposals, setProsals] = useState([]);
+  const [fakeNftTokenId, setFakeNftTokenId] = useState("");
 
+  const [numProposals, setNumProposals] = useState(0);
+  const [selectedTab, setSelectedTab] = useState("");
   const [nftBalance, setNftBalance] = useState(0);
-  const [fakeNftTokenId, setfakeNftTokenId] = useState("");
-  const [selectTab, setSelectedTab] = useState("");
 
   const [loading, setLoading] = useState(false);
-  const [walletConnected, setWalletConnected] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
+  const [proposals, setProposals] = useState([]);
+
   const web3ModalRef = useRef();
 
   const connectWallet = async () => {
@@ -30,6 +35,40 @@ export default function Home() {
       setWalletConnected(true);
     } catch (error) {
       console.error(error);
+    }
+  };
+
+  const getDAOOwner = async () => {
+    try {
+      const signer = (await getProviderOrSigner(true)) as Signer;
+      const contract = getDaoContractInstance(signer);
+
+      const _owner = await contract.owner();
+      const address = await signer.getAddress();
+
+      if (address.toLowerCase() === _owner.toLowerCase()) {
+        setIsOwner(true);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const withdrawDAOEther = async () => {
+    try {
+      const signer = await getProviderOrSigner(true);
+      const contract = getDaoContractInstance(signer);
+
+      const tx = await contract.withdrawEther();
+      setLoading(true);
+
+      await tx.wait();
+      setLoading(false);
+
+      getDAOTreasuryBalance();
+    } catch (err) {
+      console.error(err);
+      window.alert(err);
     }
   };
 
@@ -69,7 +108,7 @@ export default function Home() {
     try {
       const signer = await getProviderOrSigner(true);
       const daoContract = getDaoContractInstance(signer);
-      const txn = daoContract.createProposal(fakeNftTokenId);
+      const txn = await daoContract.createProposal(fakeNftTokenId);
       setLoading(true);
       await txn.wait();
       await getNumProposalsInDAO();
@@ -79,12 +118,12 @@ export default function Home() {
     }
   };
 
-  const fetchProposalById = async (id: any) => {
+  const fetchProposalById = async (id: number) => {
     try {
       const provider = await getProviderOrSigner();
       const daoContract = getDaoContractInstance(provider);
       const proposal = await daoContract.proposals(id);
-      const parsedProposal = {
+      const parsedProposal: Proposal = {
         proposalId: id,
         nftTokenId: proposal.nftTokenId.toString(),
         deadline: new Date(parseInt(proposal.deadline.toString()) * 1000),
@@ -105,7 +144,7 @@ export default function Home() {
         const proposal = await fetchProposalById(i);
         proposals.push(proposal);
       }
-      setProsals(proposals);
+      setProposals(proposals);
       return proposals;
     } catch (error) {
       console.error(error);
@@ -145,7 +184,7 @@ export default function Home() {
 
   const getProviderOrSigner = async (needSigner = false) => {
     // @ts-ignore
-    const provider = await web3ModalRef.current!.connect();
+    const provider = await web3ModalRef.current.connect();
     const web3Provider = new providers.Web3Provider(provider);
 
     const { chainId } = await web3Provider.getNetwork();
@@ -169,5 +208,135 @@ export default function Home() {
     return new Contract(NFT_CONTRACT_ADDRESS, NFT_ABI, providerOrSigner);
   };
 
-  return <div></div>;
+  useEffect(() => {
+    if (!walletConnected) {
+      // @ts-ignore
+      web3ModalRef.current = new Web3Modal({
+        network: "goerli",
+        providerOptions: {},
+        disableInjectedProvider: false,
+      });
+
+      connectWallet().then(() => {
+        getDAOTreasuryBalance();
+        getUserNFTBalance();
+        getNumProposalsInDAO();
+        getDAOOwner();
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [walletConnected]);
+
+  useEffect(() => {
+    if (selectedTab === "View Proposals") {
+      fetchAllProposals();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTab]);
+
+  function renderTabs() {
+    if (selectedTab === "Create Proposal") {
+      return renderCreateProposalTab();
+    } else if (selectedTab === "View Proposals") {
+      return renderViewProposalsTab();
+    }
+    return null;
+  }
+
+  function renderCreateProposalTab() {
+    if (loading) {
+      return (
+        <div className={styles.description}>
+          Loading... Waiting for transaction...
+        </div>
+      );
+    } else if (nftBalance === 0) {
+      return (
+        <div className={styles.description}>
+          You do not own any LION NFTs. <br />
+          <b> You cannot create or vote on proposals</b>
+        </div>
+      );
+    } else {
+      return (
+        <div className={styles.container}>
+          <label>Fake NFT Token ID to Purchase:</label>
+          <input
+            placeholder="0"
+            type="number"
+            onChange={(e) => setFakeNftTokenId(e.target.value)}
+          />
+          <button className={styles.button2} onClick={createProposal}>
+            Create
+          </button>
+        </div>
+      );
+    }
+  }
+
+  function renderViewProposalsTab() {
+    if (loading) {
+      return (
+        <div className={styles.description}>
+          Loading... Waiting for transaction...
+        </div>
+      );
+    } else if (proposals.length === 0) {
+      return (
+        <div className={styles.description}>No proposals have been created</div>
+      );
+    } else {
+      return (
+        <div>
+          {proposals.map((p: Proposal, index) => (
+            <div key={index} className={styles.proposalCard}>
+              <p>Proposal ID: {p.proposalId}</p>
+              <p>Fake NFT to Purchase: {p.nftTokenId}</p>
+              <p>Deadline: {p.deadline.toLocaleString()}</p>
+              <p>Yay Votes: {p.yayVotes}</p>
+              <p>Nay Votes: {p.nayVotes}</p>
+              <p>Executed?: {p.executed.toString()}</p>
+              {p.deadline.getTime() > Date.now() && !p.executed ? (
+                <div className={styles.flex}>
+                  <button
+                    className={styles.button2}
+                    onClick={() => voteOnProposal(p.proposalId, "YAY")}
+                  >
+                    Vote YAY
+                  </button>
+
+                  <button
+                    className={styles.button2}
+                    onClick={() => voteOnProposal(p.proposalId, "NAY")}
+                  >
+                    Vote NAY
+                  </button>
+                </div>
+              ) : p.deadline.getTime() < Date.now() && !p.executed ? (
+                <div className={styles.flex}>
+                  <button
+                    className={styles.button2}
+                    onClick={() => executeProposal(p.proposalId)}
+                  >
+                    Execute Proposal{" "}
+                    {p.yayVotes > p.nayVotes ? "(YAY)" : "(NAY)"}
+                  </button>
+                </div>
+              ) : (
+                <div className={styles.description}>Proposal Executed </div>
+              )}
+            </div>
+          ))}
+        </div>
+      );
+    }
+  }
+
+  return (
+    <div>
+      <Head>
+        <title>Lion DAO</title>
+      </Head>
+    </div>
+  );
 }
