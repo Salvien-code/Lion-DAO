@@ -13,6 +13,7 @@ import { Contract, providers, Signer } from "ethers";
 import { Web3Provider } from "@ethersproject/providers";
 import Web3Modal from "web3modal";
 import { Proposal } from "../types";
+import { formatEther } from "ethers/lib/utils";
 
 export default function Home() {
   const [walletConnected, setWalletConnected] = useState(false);
@@ -336,7 +337,62 @@ export default function Home() {
     <div>
       <Head>
         <title>Lion DAO</title>
+        <meta name="description" content="Lion DAO" />
+        <link rel="icon" href="/favicon.ico" />
       </Head>
+
+      <main className={styles.main}>
+        <div>
+          <h1 className={styles.title}>Welcome to the LION DAO</h1>
+          <div className={styles.description}>The Ultimate DAO</div>
+          <div className={styles.description}>
+            Your Lion NFT Balance: {nftBalance} <br />
+            Treasury Balance: {formatEther(treasuryBalance)} ETH
+            <br />
+            Total Number of Proposals: {numProposals}
+          </div>
+          <div className={styles.flex}>
+            <button
+              className={styles.button}
+              onClick={() => setSelectedTab("Create Proposal")}
+            >
+              Create Proposal
+            </button>
+            <button
+              className={styles.button}
+              onClick={() => setSelectedTab("View Proposals")}
+            >
+              View Proposals
+            </button>
+          </div>
+          {renderTabs()}
+          {isOwner ? (
+            <div>
+              {loading ? (
+                <button className={styles.button}> Loading...</button>
+              ) : (
+                <button className={styles.button} onClick={withdrawDAOEther}>
+                  Withdraw DAO ETH
+                </button>
+              )}
+            </div>
+          ) : (
+            ""
+          )}
+        </div>
+        <div>
+          <Image
+            className={styles.image}
+            src="/Lions/0.svg"
+            alt="Coin"
+            width={200}
+            height={200}
+          />
+        </div>
+      </main>
+      <footer className={styles.footer}>
+        Made with &#10084; by Simon Samuel
+      </footer>
     </div>
   );
 }
